@@ -1,8 +1,6 @@
 package belastic
 
-import (
-	"strings"
-)
+import "strings"
 
 func joinWithQuote(elems []string, sep string) string {
 	switch len(elems) {

@@ -29,6 +29,54 @@ func init() {
 	})
 }
 
+func TestConnection_IndexCreate(t *testing.T) {
+	set := &Settings{
+		NumberOfShards:   2,
+		NumberOfReplicas: 1,
+	}
+
+	mappings := &Mappings{}
+	mappings.Add(
+		NewProperty(`id`, TypeUlong),
+		NewProperty(`name`, TypeKeyword),
+		NewProperty(`content`, TypeText),
+		NewProperty(`lastLoginTime`, TypeDate).WithFormat(FormatDateTime+"||"+FormatUnixTime),
+		NewProperty(`lastLoginIp`, TypeIp),
+		NewProperty(`status`, TypeByte),
+		NewProperty(`version`, TypeVersion),
+	)
+
+	ok, err := conn.IndexCreate(`user`, set, mappings, time.Second*3)
+	t.Logf("ok:%t err:%+v", ok, err)
+}
+
+func TestConnection_MappingsAlter(t *testing.T) {
+	mappings := &Mappings{}
+	mappings.Add(
+		NewProperty(`id`, TypeUlong),
+		NewProperty(`name`, TypeKeyword),
+		NewProperty(`content`, TypeText),
+		NewProperty(`lastLoginTime`, TypeDate).WithFormat(FormatDateTime+"||"+FormatUnixTime),
+		NewProperty(`lastLoginIp`, TypeIp),
+		NewProperty(`tags`, TypeKeyword),
+		NewProperty(`status`, TypeByte),
+		NewProperty(`version`, TypeVersion),
+	)
+
+	ok, err := conn.MappingsAlter(`user`, mappings, time.Second*3)
+	t.Logf("ok:%t err:%+v", ok, err)
+}
+
+func TestConnection_SetMaxResultWindow(t *testing.T) {
+	ok, err := conn.SetMaxResultWindow(`user`, 1000, time.Second*3)
+	t.Logf("ok:%t err:%+v", ok, err)
+}
+
+func TestConnection_IndexDelete(t *testing.T) {
+	ok, err := conn.IndexDelete(`user`, time.Second)
+	t.Logf("ok:%t err:%+v", ok, err)
+}
+
 func TestConnection_SqlTranslate(t *testing.T) {
 	resp, err := conn.SqlTranslate("SELECT COUNT(id) AS num FROM `user` GROUP BY kind", 10, time.Second)
 	if err != nil {
