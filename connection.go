@@ -3,6 +3,7 @@ package belastic
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -47,7 +48,7 @@ func (c *Connection) needAuth() bool {
 	return c.username != ""
 }
 
-func (c *Connection) request(method, path string, params string, timeout time.Duration) (response *Response, err error) {
+func (c *Connection) request(timeout time.Duration, method, path string, params string) (response *Response, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -95,19 +96,19 @@ func (c *Connection) request(method, path string, params string, timeout time.Du
 	return
 }
 
-func (c *Connection) Put(path string, params string, timeout time.Duration) (*Response, error) {
-	return c.request(http.MethodPut, path, params, timeout)
+func (c *Connection) Put(timeout time.Duration, path string, params string) (*Response, error) {
+	return c.request(timeout, http.MethodPut, path, params)
 }
 
-func (c *Connection) Post(path string, params string, timeout time.Duration) (*Response, error) {
-	return c.request(http.MethodPost, path, params, timeout)
+func (c *Connection) Post(timeout time.Duration, path string, params string) (*Response, error) {
+	return c.request(timeout, http.MethodPost, path, params)
 }
 
-func (c *Connection) Get(path string, params string, timeout time.Duration) (*Response, error) {
-	return c.request(http.MethodGet, path, params, timeout)
+func (c *Connection) Get(timeout time.Duration, path string, params string) (*Response, error) {
+	return c.request(timeout, http.MethodGet, path, params)
 }
 
-func (c *Connection) IndexCreate(index string, settings *Settings, mappings *Mappings, timeout time.Duration) (ok bool, err error) {
+func (c *Connection) IndexCreate(timeout time.Duration, index string, settings *Settings, mappings *Mappings) (ok bool, err error) {
 	var body strings.Builder
 
 	body.WriteString(`{"settings":`)
@@ -120,7 +121,7 @@ func (c *Connection) IndexCreate(index string, settings *Settings, mappings *Map
 
 	body.WriteByte('}')
 
-	resp, err := c.request(http.MethodPut, "/"+index, body.String(), timeout)
+	resp, err := c.request(timeout, http.MethodPut, "/"+index, body.String())
 	if err != nil {
 		return
 	}
@@ -131,22 +132,9 @@ func (c *Connection) IndexCreate(index string, settings *Settings, mappings *Map
 	return true, nil
 }
 
-func (c *Connection) IndexDelete(index string, timeout time.Duration) (ok bool, err error) {
-	resp, err := c.request(http.MethodDelete, "/"+index, "", timeout)
+func (c *Connection) IndexDelete(timeout time.Duration, index string) (ok bool, err error) {
+	resp, err := c.request(timeout, http.MethodDelete, "/"+index, "")
 
-	if err != nil {
-		return
-	}
-
-	if !resp.IsOk() {
-		return false, resp.Error()
-	}
-
-	return true, nil
-}
-
-func (c *Connection) SettingsAlter(index string, settings base.JsonParam, timeout time.Duration) (ok bool, err error) {
-	resp, err := c.request(http.MethodPut, "/"+index+"/_settings", base.Bytes2String(settings.JsonMarshal()), timeout)
 	if err != nil {
 		return
 	}
@@ -158,12 +146,8 @@ func (c *Connection) SettingsAlter(index string, settings base.JsonParam, timeou
 	return true, nil
 }
 
-func (c *Connection) SetMaxResultWindow(index string, value int64, timeout time.Duration) (ok bool, err error) {
-	return c.SettingsAlter(index, base.JsonParam{"index.max_result_window": value}, timeout)
-}
-
-func (c *Connection) MappingsAlter(index string, mappings *Mappings, timeout time.Duration) (ok bool, err error) {
-	resp, err := c.request(http.MethodPut, "/"+index+"/_mapping", base.Bytes2String(mappings.Marshal()), timeout)
+func (c *Connection) SettingsAlter(timeout time.Duration, index string, settings base.JsonParam) (ok bool, err error) {
+	resp, err := c.request(timeout, http.MethodPut, "/"+index+"/_settings", base.Bytes2String(settings.JsonMarshal()))
 	if err != nil {
 		return
 	}
@@ -175,7 +159,54 @@ func (c *Connection) MappingsAlter(index string, mappings *Mappings, timeout tim
 	return true, nil
 }
 
-func (c *Connection) SqlTranslate(sql string, limit int, timeout time.Duration) (*Response, error) {
+func (c *Connection) SetMaxResultWindow(timeout time.Duration, index string, value int64) (ok bool, err error) {
+	return c.SettingsAlter(timeout, index, base.JsonParam{"index.max_result_window": value})
+}
+
+func (c *Connection) MappingsAlter(timeout time.Duration, index string, mappings *Mappings) (ok bool, err error) {
+	resp, err := c.request(timeout, http.MethodPut, "/"+index+"/_mapping", base.Bytes2String(mappings.Marshal()))
+	if err != nil {
+		return
+	}
+
+	if !resp.IsOk() {
+		return false, resp.Error()
+	}
+
+	return true, nil
+}
+
+func (c *Connection) Bulk(timeout time.Duration, param string) (resp *Response, err error) {
+	return c.Post(timeout, "/_bulk", param)
+}
+
+func (c *Connection) BulkItems(timeout time.Duration, items ...BulkItem) (resp *Response, err error) {
+	if len(items) < 1 {
+		return nil, errors.New("items is required")
+	}
+
+	var buf strings.Builder
+
+	for _, item := range items {
+		buf.WriteString(item.Build())
+		buf.WriteByte('\n')
+	}
+
+	return c.Bulk(timeout, buf.String())
+}
+
+func (c *Connection) Set(timeout time.Duration, index string, rows ...base.JsonParam) (resp *Response, err error) {
+	items := make([]BulkItem, len(rows), len(rows))
+	for i, row := range rows {
+		var id = ""
+
+		items[i] = IndexItem(index, id, row)
+	}
+
+	return c.BulkItems(timeout, items...)
+}
+
+func (c *Connection) SqlTranslate(timeout time.Duration, sql string, limit int) (*Response, error) {
 	query := fmt.Sprintf(`{"query": "%s", "fetch_size": %d}`, sql, limit)
-	return c.Post("/_sql/translate", query, timeout)
+	return c.Post(timeout, "/_sql/translate", query)
 }

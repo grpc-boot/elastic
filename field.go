@@ -3,7 +3,7 @@ package belastic
 import "strings"
 
 const (
-	optContains = iota
+	optTerms = iota
 	optLt
 	optLte
 	optGt
@@ -21,24 +21,12 @@ type Field struct {
 	values   []string
 }
 
-func Contains(field string, values ...string) Field {
-	return Field{key: field, operator: optContains, values: values}
+func Term(field string, value string) Field {
+	return Field{key: field, operator: optTerms, values: []string{value}}
 }
 
 func Terms(field string, values ...string) Field {
-	return Contains(field, values...)
-}
-
-func In(field string, values ...string) Field {
-	return Contains(field, values...)
-}
-
-func Equal(field string, value string) Field {
-	return Term(field, value)
-}
-
-func Term(field string, value string) Field {
-	return Field{key: field, operator: optContains, values: []string{value}}
+	return Field{key: field, operator: optTerms, values: values}
 }
 
 func Lt(field string, value string) Field {
@@ -67,8 +55,8 @@ func (f Field) Build() string {
 	}
 
 	switch f.operator {
-	case optContains:
-		return f.buildContains()
+	case optTerms:
+		return f.buildTerms()
 	case optLt:
 		return f.buildLt()
 	case optLte:
@@ -84,7 +72,7 @@ func (f Field) Build() string {
 	return ""
 }
 
-func (f Field) buildContains() string {
+func (f Field) buildTerms() string {
 	buf := strings.Builder{}
 
 	n := len(f.key) + 1 + len(Or)*(len(f.values)-1)

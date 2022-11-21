@@ -1,6 +1,7 @@
 package belastic
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 
@@ -43,42 +44,88 @@ func TestConnection_IndexCreate(t *testing.T) {
 		NewProperty(`lastLoginTime`, TypeDate).WithFormat(FormatDateTime+"||"+FormatUnixTime),
 		NewProperty(`lastLoginIp`, TypeIp),
 		NewProperty(`status`, TypeByte),
-		NewProperty(`version`, TypeVersion),
 	)
 
-	ok, err := conn.IndexCreate(`user`, set, mappings, time.Second*3)
+	ok, err := conn.IndexCreate(time.Second*3, `user`, set, mappings)
 	t.Logf("ok:%t err:%+v", ok, err)
 }
 
 func TestConnection_MappingsAlter(t *testing.T) {
 	mappings := &Mappings{}
 	mappings.Add(
-		NewProperty(`id`, TypeUlong),
-		NewProperty(`name`, TypeKeyword),
-		NewProperty(`content`, TypeText),
-		NewProperty(`lastLoginTime`, TypeDate).WithFormat(FormatDateTime+"||"+FormatUnixTime),
-		NewProperty(`lastLoginIp`, TypeIp),
-		NewProperty(`tags`, TypeKeyword),
-		NewProperty(`status`, TypeByte),
+		NewProperty(`tags`, TypeByte),
 		NewProperty(`version`, TypeVersion),
 	)
 
-	ok, err := conn.MappingsAlter(`user`, mappings, time.Second*3)
+	ok, err := conn.MappingsAlter(time.Second*3, `user`, mappings)
 	t.Logf("ok:%t err:%+v", ok, err)
 }
 
 func TestConnection_SetMaxResultWindow(t *testing.T) {
-	ok, err := conn.SetMaxResultWindow(`user`, 1000, time.Second*3)
+	ok, err := conn.SetMaxResultWindow(time.Second*3, `user`, 1000)
 	t.Logf("ok:%t err:%+v", ok, err)
 }
 
 func TestConnection_IndexDelete(t *testing.T) {
-	ok, err := conn.IndexDelete(`user`, time.Second)
+	ok, err := conn.IndexDelete(time.Second*3, `user`)
 	t.Logf("ok:%t err:%+v", ok, err)
 }
 
+func TestConnection_BulkItems(t *testing.T) {
+	resp, err := conn.BulkItems(time.Second*10,
+		IndexItem(`user`, ``, base.JsonParam{
+			"name":          "name_1",
+			"content":       "content user 1 user",
+			"lastLoginTime": time.Now().Unix(),
+			"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+			"status":        1,
+			"tags":          []int8{1, 3, 5},
+			"version":       "13.0.0.1",
+		}),
+		IndexItem(`user`, `2`, base.JsonParam{
+			"name":          "name_2",
+			"content":       "content user 2 user",
+			"lastLoginTime": time.Now().Unix(),
+			"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+			"status":        1,
+			"tags":          []int8{1, 3, 5},
+			"version":       "12.0.0.1",
+		}),
+		CreateItem(`user`, base.JsonParam{
+			"name":          "name_3",
+			"content":       "content user 3 user",
+			"lastLoginTime": time.Now().Unix(),
+			"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+			"status":        1,
+			"tags":          []int8{2, 5},
+			"version":       "12.0.1.1",
+		}),
+	)
+
+	if err != nil {
+		t.Fatalf("want nil, got error:%s", err)
+	}
+
+	t.Logf("status: %d body:%s", resp.Status, resp.Body)
+
+	requestOk := resp.IsOk()
+	if !requestOk {
+		t.Fatalf("want true, got %t", requestOk)
+	}
+
+	result, err := resp.UnmarshalBulkResult()
+	if err != nil {
+		t.Fatalf("want nil, got error:%s", err)
+	}
+
+	hasError := result.HasErrors()
+	if hasError {
+		t.Fatalf("want false, got %t", hasError)
+	}
+}
+
 func TestConnection_SqlTranslate(t *testing.T) {
-	resp, err := conn.SqlTranslate("SELECT COUNT(id) AS num FROM `user` GROUP BY kind", 10, time.Second)
+	resp, err := conn.SqlTranslate(time.Second*3, "SELECT COUNT(id) AS num FROM `user` GROUP BY kind", 10)
 	if err != nil {
 		t.Fatalf("want nil, got %s", err)
 	}
@@ -92,8 +139,8 @@ func TestQuery_Build(t *testing.T) {
 	str := query.From("user").
 		Where(AndCondition(
 			Gte("id", "10000"),
-			Equal("checkstatus", "2"),
-			Equal("isdel", "0"),
+			Term("checkstatus", "2"),
+			Term("isdel", "0"),
 		)).
 		Offset(1).
 		Limit(100).
@@ -110,14 +157,14 @@ func TestQuery_Search(t *testing.T) {
 		From("user").
 		Where(AndCondition(
 			Gte("id", "10000"),
-			Equal("isdel", "1"),
+			Term("isdel", "1"),
 		)).
 		Limit(10).
 		OrderBy(Asc("id"), Desc("color"))
 
 	t.Logf("query:%s", query.Build())
 
-	result, err := query.Search(conn, time.Second*2)
+	result, err := query.Search(time.Second*3, conn)
 
 	t.Logf("result: %+v error:%v", result, err)
 }

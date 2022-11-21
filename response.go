@@ -38,6 +38,16 @@ func (r *Response) Error() (err error) {
 	return errors.New(errMsg.String())
 }
 
+func (r *Response) UnmarshalBulkResult() (*BulkResult, error) {
+	br := &BulkResult{}
+	err := base.JsonUnmarshal(r.Body, br)
+	if err != nil {
+		return nil, err
+	}
+
+	return br, nil
+}
+
 func (r *Response) UnmarshalSearchResult() (*SearchResult, error) {
 	sr := &SearchResult{}
 	err := base.JsonUnmarshal(r.Body, sr)
