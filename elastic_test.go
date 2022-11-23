@@ -1,4 +1,4 @@
-package belastic
+package elastic
 
 import (
 	"math/rand"
@@ -104,6 +104,33 @@ func TestConnection_DocsInsert(t *testing.T) {
 	}
 
 	t.Logf("insert auto create id response:%+v", res)
+}
+
+func TestConnection_DocsGet(t *testing.T) {
+	res, err := conn.DocsGet(time.Second*3, `user`, "100")
+	if err != nil {
+		t.Fatalf("want nil, got %s", err)
+	}
+
+	t.Logf("res: %+v", res)
+
+	res, err = conn.DocsGet(time.Second*3, `user`, "1001")
+	if err != nil {
+		t.Fatalf("want nil, got %s", err)
+	}
+
+	t.Logf("res: %+v", res)
+}
+
+func TestConnection_DocsMGet(t *testing.T) {
+	res, err := conn.DocsMGet(time.Second*3, `user`, "100", "101", "1")
+	if err != nil {
+		t.Fatalf("want nil, got %s", err)
+	}
+
+	t.Logf("rowsMap: %+v", res.ToRowsMap())
+	t.Logf("rows: %+v", res.ToRows())
+	t.Logf("res: %+v", res)
 }
 
 func TestConnection_DocsUpdate(t *testing.T) {

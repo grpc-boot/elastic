@@ -1,4 +1,4 @@
-package belastic
+package elastic
 
 import (
 	"bytes"
@@ -257,6 +257,39 @@ func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, 
 		return resp.UnmarshalDocumentResult()
 	}
 
+	return nil, resp.Error()
+}
+
+// DocsGet
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
+func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*DocumentItem, error) {
+	resp, err := c.Get(timeout, "/"+index+"/_doc/"+id, "")
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() || resp.Status == http.StatusNotFound {
+		return resp.UnmarshalDocumentItem()
+	}
+
+	return nil, resp.Error()
+}
+
+// DocsMGet
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-get.html
+func (c *Connection) DocsMGet(timeout time.Duration, index string, idList ...string) (rows *MGetResult, err error) {
+	param, _ := base.JsonMarshal(map[string]interface{}{
+		"ids": idList,
+	})
+
+	resp, err := c.Get(timeout, "/"+index+"/_mget", base.Bytes2String(param))
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() {
+		return resp.UnmarshalMGetResult()
+	}
 	return nil, resp.Error()
 }
 

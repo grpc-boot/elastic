@@ -1,4 +1,4 @@
-package belastic
+package elastic
 
 type BulkResult struct {
 	Errors bool `json:"errors"`

@@ -1,4 +1,4 @@
-package belastic
+package elastic
 
 import "strings"
 

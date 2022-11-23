@@ -1,4 +1,4 @@
-package belastic
+package elastic
 
 import (
 	"errors"
@@ -66,4 +66,24 @@ func (r *Response) UnmarshalDocumentResult() (*DocumentResult, error) {
 	}
 
 	return dr, nil
+}
+
+func (r *Response) UnmarshalMGetResult() (*MGetResult, error) {
+	mgr := &MGetResult{}
+	err := base.JsonUnmarshal(r.Body, mgr)
+	if err != nil {
+		return nil, err
+	}
+
+	return mgr, nil
+}
+
+func (r *Response) UnmarshalDocumentItem() (*DocumentItem, error) {
+	di := &DocumentItem{}
+	err := base.JsonUnmarshal(r.Body, di)
+	if err != nil {
+		return nil, err
+	}
+
+	return di, nil
 }

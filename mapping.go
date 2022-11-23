@@ -1,4 +1,4 @@
-package belastic
+package elastic
 
 import "github.com/grpc-boot/base"
 
