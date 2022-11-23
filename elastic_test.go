@@ -124,6 +124,59 @@ func TestConnection_BulkItems(t *testing.T) {
 	}
 }
 
+func TestConnection_MSet(t *testing.T) {
+	resp, err := conn.MSet(time.Second*10, `user`, base.JsonParam{
+		"_id":           "1",
+		"name":          "name_1",
+		"content":       "content user 1 user",
+		"lastLoginTime": time.Now().Unix(),
+		"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+		"status":        1,
+		"tags":          []int8{1, 3, 5},
+		"version":       "13.0.0.1",
+	},
+		base.JsonParam{
+			"_id":           "2",
+			"name":          "name_2",
+			"content":       "content user 2 user",
+			"lastLoginTime": time.Now().Unix(),
+			"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+			"status":        1,
+			"tags":          []int8{1, 3, 5},
+			"version":       "12.0.0.1",
+		},
+		base.JsonParam{
+			"name":          "name_3",
+			"content":       "content user 3 user",
+			"lastLoginTime": time.Now().Unix(),
+			"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+			"status":        1,
+			"tags":          []int8{2, 5},
+			"version":       "12.0.1.1",
+		})
+
+	if err != nil {
+		t.Fatalf("want nil, got error:%s", err)
+	}
+
+	t.Logf("status: %d body:%s", resp.Status, resp.Body)
+
+	requestOk := resp.IsOk()
+	if !requestOk {
+		t.Fatalf("want true, got %t", requestOk)
+	}
+
+	result, err := resp.UnmarshalBulkResult()
+	if err != nil {
+		t.Fatalf("want nil, got error:%s", err)
+	}
+
+	hasError := result.HasErrors()
+	if hasError {
+		t.Fatalf("want false, got %t", hasError)
+	}
+}
+
 func TestConnection_SqlTranslate(t *testing.T) {
 	resp, err := conn.SqlTranslate(time.Second*3, "SELECT COUNT(id) AS num FROM `user` GROUP BY kind", 10)
 	if err != nil {

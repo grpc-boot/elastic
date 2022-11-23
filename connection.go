@@ -195,11 +195,17 @@ func (c *Connection) BulkItems(timeout time.Duration, items ...BulkItem) (resp *
 	return c.Bulk(timeout, buf.String())
 }
 
-func (c *Connection) Set(timeout time.Duration, index string, rows ...base.JsonParam) (resp *Response, err error) {
-	items := make([]BulkItem, len(rows), len(rows))
-	for i, row := range rows {
-		var id = ""
+func (c *Connection) MSet(timeout time.Duration, index string, rows ...base.JsonParam) (resp *Response, err error) {
+	var (
+		items = make([]BulkItem, len(rows), len(rows))
+		id    = ""
+	)
 
+	for i, row := range rows {
+		id, _ = row["_id"].(string)
+		if id != "" {
+			delete(row, "_id")
+		}
 		items[i] = IndexItem(index, id, row)
 	}
 
