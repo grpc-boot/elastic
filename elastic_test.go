@@ -134,7 +134,14 @@ func TestConnection_DocsMGet(t *testing.T) {
 }
 
 func TestConnection_DocsUpdate(t *testing.T) {
-	res, err := conn.DocsUpdate(time.Second*3, `user`, "100", base.JsonParam{
+	getRes, err := conn.DocsGet(time.Second, `user`, "1")
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("info:%+v", getRes)
+
+	res, err := conn.DocsUpdate(time.Second*3, `user`, "1", base.JsonParam{
 		"name": "name_100",
 	})
 	if err != nil {
@@ -142,15 +149,25 @@ func TestConnection_DocsUpdate(t *testing.T) {
 	}
 
 	t.Logf("update response:%+v", res)
+	tRes, err := conn.DocsGet(time.Second, `user`, res.Id)
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+	t.Logf("info: %+v", tRes)
 
-	res, err = conn.DocsUpdate(time.Second*3, `user`, "101", base.JsonParam{
-		"name": "name_101",
-	})
+	res, err = conn.DocsUpdateWithVersion(time.Second*3, `user`, res.Id, res.Version+1, getRes.Source)
+
 	if err != nil {
 		t.Fatalf("want nil, got err: %s", err)
 	}
 
 	t.Logf("update response:%+v", res)
+
+	getRes, err = conn.DocsGet(time.Second, `user`, res.Id)
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+	t.Logf("info: %+v", getRes)
 }
 
 func TestConnection_BulkItems(t *testing.T) {

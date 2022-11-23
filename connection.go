@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -245,10 +246,41 @@ func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, 
 	body.Grow(n)
 
 	body.WriteString(`{"doc":`)
-	body.Write(doc.JsonMarshal())
+	body.Write(docBytes)
 	body.WriteByte('}')
 
 	resp, err := c.Post(timeout, "/"+index+"/_update/"+id, body.String())
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() {
+		return resp.UnmarshalDocumentResult()
+	}
+
+	return nil, resp.Error()
+}
+
+// DocsUpdateWithVersion
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
+func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, id string, version int64, fullDoc base.JsonParam) (*DocumentResult, error) {
+	var (
+		verStr = strconv.FormatInt(version, 10)
+		n      = 1 + len(index) + 6 + len(id) + 9 + len(verStr) + 25
+		path   strings.Builder
+	)
+
+	path.Grow(n)
+
+	path.WriteByte('/')
+	path.WriteString(index)
+	path.WriteString("/_doc/")
+	path.WriteString(id)
+	path.WriteString("?version=")
+	path.WriteString(verStr)
+	path.WriteString("&version_type=external_gt")
+
+	resp, err := c.Put(timeout, path.String(), base.Bytes2String(fullDoc.JsonMarshal()))
 	if err != nil {
 		return nil, err
 	}
