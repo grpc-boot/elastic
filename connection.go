@@ -146,6 +146,8 @@ func (c *Connection) IndexDelete(timeout time.Duration, index string) (ok bool, 
 	return true, nil
 }
 
+// SettingsAlter
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-update-settings.html
 func (c *Connection) SettingsAlter(timeout time.Duration, index string, settings base.JsonParam) (ok bool, err error) {
 	resp, err := c.request(timeout, http.MethodPut, "/"+index+"/_settings", base.Bytes2String(settings.JsonMarshal()))
 	if err != nil {
@@ -163,6 +165,8 @@ func (c *Connection) SetMaxResultWindow(timeout time.Duration, index string, val
 	return c.SettingsAlter(timeout, index, base.JsonParam{"index.max_result_window": value})
 }
 
+// MappingsAlter
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html
 func (c *Connection) MappingsAlter(timeout time.Duration, index string, mappings *Mappings) (ok bool, err error) {
 	resp, err := c.request(timeout, http.MethodPut, "/"+index+"/_mapping", base.Bytes2String(mappings.Marshal()))
 	if err != nil {
@@ -176,11 +180,13 @@ func (c *Connection) MappingsAlter(timeout time.Duration, index string, mappings
 	return true, nil
 }
 
+// Bulk
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-bulk.html
 func (c *Connection) Bulk(timeout time.Duration, param string) (resp *Response, err error) {
 	return c.Post(timeout, "/_bulk", param)
 }
 
-func (c *Connection) BulkItems(timeout time.Duration, items ...BulkItem) (resp *Response, err error) {
+func (c *Connection) DocsBulk(timeout time.Duration, items ...BulkDoc) (resp *Response, err error) {
 	if len(items) < 1 {
 		return nil, errors.New("items is required")
 	}
@@ -195,9 +201,68 @@ func (c *Connection) BulkItems(timeout time.Duration, items ...BulkItem) (resp *
 	return c.Bulk(timeout, buf.String())
 }
 
-func (c *Connection) MSet(timeout time.Duration, index string, rows ...base.JsonParam) (resp *Response, err error) {
+// DocsInsert
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
+func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.JsonParam) (*DocumentResult, error) {
 	var (
-		items = make([]BulkItem, len(rows), len(rows))
+		id, _ = row["_id"].(string)
+		path  strings.Builder
+	)
+
+	path.WriteByte('/')
+	path.WriteString(index)
+	path.WriteByte('/')
+
+	if id != "" {
+		path.WriteString(`_create/`)
+		path.WriteString(id)
+		delete(row, "_id")
+	} else {
+		path.WriteString(`_doc/`)
+	}
+
+	resp, err := c.Post(timeout, path.String(), base.Bytes2String(row.JsonMarshal()))
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() {
+		return resp.UnmarshalDocumentResult()
+	}
+
+	return nil, resp.Error()
+}
+
+// DocsUpdate
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html
+func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, doc base.JsonParam) (*DocumentResult, error) {
+	var (
+		docBytes = doc.JsonMarshal()
+		n        = 7 + len(docBytes) + 1
+		body     strings.Builder
+	)
+
+	body.Grow(n)
+
+	body.WriteString(`{"doc":`)
+	body.Write(doc.JsonMarshal())
+	body.WriteByte('}')
+
+	resp, err := c.Post(timeout, "/"+index+"/_update/"+id, body.String())
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() {
+		return resp.UnmarshalDocumentResult()
+	}
+
+	return nil, resp.Error()
+}
+
+func (c *Connection) DocsMSet(timeout time.Duration, index string, rows ...base.JsonParam) (resp *Response, err error) {
+	var (
+		items = make([]BulkDoc, len(rows), len(rows))
 		id    = ""
 	)
 
@@ -206,10 +271,10 @@ func (c *Connection) MSet(timeout time.Duration, index string, rows ...base.Json
 		if id != "" {
 			delete(row, "_id")
 		}
-		items[i] = IndexItem(index, id, row)
+		items[i] = IndexDoc(index, id, row)
 	}
 
-	return c.BulkItems(timeout, items...)
+	return c.DocsBulk(timeout, items...)
 }
 
 func (c *Connection) SqlTranslate(timeout time.Duration, sql string, limit int) (*Response, error) {

@@ -57,3 +57,13 @@ func (r *Response) UnmarshalSearchResult() (*SearchResult, error) {
 
 	return sr, nil
 }
+
+func (r *Response) UnmarshalDocumentResult() (*DocumentResult, error) {
+	dr := &DocumentResult{}
+	err := base.JsonUnmarshal(r.Body, dr)
+	if err != nil {
+		return nil, err
+	}
+
+	return dr, nil
+}

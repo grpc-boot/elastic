@@ -13,30 +13,30 @@ const (
 	OptDelete
 )
 
-type BulkItem struct {
+type BulkDoc struct {
 	cmd        uint8
 	index      string
 	id         string
 	fieldValue base.JsonParam
 }
 
-func IndexItem(index, id string, fieldValue base.JsonParam) BulkItem {
-	return BulkItem{cmd: OptIndex, index: index, id: id, fieldValue: fieldValue}
+func IndexDoc(index, id string, fieldValue base.JsonParam) BulkDoc {
+	return BulkDoc{cmd: OptIndex, index: index, id: id, fieldValue: fieldValue}
 }
 
-func CreateItem(index string, fieldValue base.JsonParam) BulkItem {
-	return BulkItem{cmd: OptCreate, index: index, fieldValue: fieldValue}
+func CreateDoc(index string, fieldValue base.JsonParam) BulkDoc {
+	return BulkDoc{cmd: OptCreate, index: index, fieldValue: fieldValue}
 }
 
-func UpdateItem(index, id string, fieldValue base.JsonParam) BulkItem {
-	return BulkItem{cmd: OptUpdate, index: index, id: id, fieldValue: fieldValue}
+func UpdateDoc(index, id string, fieldValue base.JsonParam) BulkDoc {
+	return BulkDoc{cmd: OptUpdate, index: index, id: id, fieldValue: fieldValue}
 }
 
-func DeleteItem(index, id string) BulkItem {
-	return BulkItem{cmd: OptDelete, index: index, id: id}
+func DeleteDoc(index, id string) BulkDoc {
+	return BulkDoc{cmd: OptDelete, index: index, id: id}
 }
 
-func (bi *BulkItem) Build() string {
+func (bi *BulkDoc) Build() string {
 	switch bi.cmd {
 	case OptDelete:
 		return bi.buildDelete()
@@ -49,7 +49,7 @@ func (bi *BulkItem) Build() string {
 	return bi.buildIndex()
 }
 
-func (bi *BulkItem) buildIndex() string {
+func (bi *BulkDoc) buildIndex() string {
 	var buf strings.Builder
 
 	fv := bi.fieldValue.JsonMarshal()
@@ -77,7 +77,7 @@ func (bi *BulkItem) buildIndex() string {
 	return buf.String()
 }
 
-func (bi *BulkItem) buildDelete() string {
+func (bi *BulkDoc) buildDelete() string {
 	var buf strings.Builder
 	n := 21 + len(bi.index) + 9 + len(bi.id) + 3
 
@@ -92,7 +92,7 @@ func (bi *BulkItem) buildDelete() string {
 	return buf.String()
 }
 
-func (bi *BulkItem) buildCreate() string {
+func (bi *BulkDoc) buildCreate() string {
 	var buf strings.Builder
 
 	fv := bi.fieldValue.JsonMarshal()
@@ -120,7 +120,7 @@ func (bi *BulkItem) buildCreate() string {
 	return buf.String()
 }
 
-func (bi *BulkItem) buildUpdate() string {
+func (bi *BulkDoc) buildUpdate() string {
 	var buf strings.Builder
 
 	fv := bi.fieldValue.JsonMarshal()

@@ -71,9 +71,64 @@ func TestConnection_IndexDelete(t *testing.T) {
 	t.Logf("ok:%t err:%+v", ok, err)
 }
 
+func TestConnection_DocsInsert(t *testing.T) {
+	res, err := conn.DocsInsert(time.Second*3, `user`, base.JsonParam{
+		"_id":           "100",
+		"name":          "name_1",
+		"content":       "content user 1 user",
+		"lastLoginTime": time.Now().Unix(),
+		"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+		"status":        1,
+		"tags":          []int8{1, 3, 5},
+		"version":       "13.0.0.1",
+	})
+
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("insert custom id response:%+v", res)
+
+	res, err = conn.DocsInsert(time.Second*3, `user`, base.JsonParam{
+		"name":          "name_1",
+		"content":       "content user 1 user",
+		"lastLoginTime": time.Now().Unix(),
+		"lastLoginIp":   base.Long2Ip(rand.Uint32()),
+		"status":        1,
+		"tags":          []int8{1, 3, 5},
+		"version":       "13.0.0.1",
+	})
+
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("insert auto create id response:%+v", res)
+}
+
+func TestConnection_DocsUpdate(t *testing.T) {
+	res, err := conn.DocsUpdate(time.Second*3, `user`, "100", base.JsonParam{
+		"name": "name_100",
+	})
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("update response:%+v", res)
+
+	res, err = conn.DocsUpdate(time.Second*3, `user`, "101", base.JsonParam{
+		"name": "name_101",
+	})
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("update response:%+v", res)
+}
+
 func TestConnection_BulkItems(t *testing.T) {
-	resp, err := conn.BulkItems(time.Second*10,
-		IndexItem(`user`, ``, base.JsonParam{
+	resp, err := conn.DocsBulk(time.Second*10,
+		IndexDoc(`user`, ``, base.JsonParam{
 			"name":          "name_1",
 			"content":       "content user 1 user",
 			"lastLoginTime": time.Now().Unix(),
@@ -82,7 +137,7 @@ func TestConnection_BulkItems(t *testing.T) {
 			"tags":          []int8{1, 3, 5},
 			"version":       "13.0.0.1",
 		}),
-		IndexItem(`user`, `2`, base.JsonParam{
+		IndexDoc(`user`, `2`, base.JsonParam{
 			"name":          "name_2",
 			"content":       "content user 2 user",
 			"lastLoginTime": time.Now().Unix(),
@@ -91,7 +146,7 @@ func TestConnection_BulkItems(t *testing.T) {
 			"tags":          []int8{1, 3, 5},
 			"version":       "12.0.0.1",
 		}),
-		CreateItem(`user`, base.JsonParam{
+		CreateDoc(`user`, base.JsonParam{
 			"name":          "name_3",
 			"content":       "content user 3 user",
 			"lastLoginTime": time.Now().Unix(),
@@ -125,7 +180,7 @@ func TestConnection_BulkItems(t *testing.T) {
 }
 
 func TestConnection_MSet(t *testing.T) {
-	resp, err := conn.MSet(time.Second*10, `user`, base.JsonParam{
+	resp, err := conn.DocsMSet(time.Second*10, `user`, base.JsonParam{
 		"_id":           "1",
 		"name":          "name_1",
 		"content":       "content user 1 user",
