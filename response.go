@@ -2,10 +2,11 @@ package elastic
 
 import (
 	"errors"
-	"github.com/grpc-boot/elastic/results"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/grpc-boot/elastic/results"
 
 	"github.com/grpc-boot/base"
 )
@@ -13,6 +14,10 @@ import (
 type Response struct {
 	Status int    `json:"status"`
 	Body   []byte `json:"body"`
+}
+
+func (r *Response) Is(status int) bool {
+	return r.Status == status
 }
 
 func (r *Response) IsOk() bool {
@@ -59,6 +64,26 @@ func (r *Response) UnmarshalSearchResult() (*results.SearchResult, error) {
 	return sr, nil
 }
 
+func (r *Response) UnmarshalIndexResult() (*results.IndexResult, error) {
+	ir := &results.IndexResult{}
+	err := base.JsonUnmarshal(r.Body, ir)
+	if err != nil {
+		return nil, err
+	}
+
+	return ir, nil
+}
+
+func (r *Response) UnmarshalDocumentsResult() (*results.DocumentsResult, error) {
+	dr := &results.DocumentsResult{}
+	err := base.JsonUnmarshal(r.Body, dr)
+	if err != nil {
+		return nil, err
+	}
+
+	return dr, nil
+}
+
 func (r *Response) UnmarshalDocumentResult() (*results.DocumentResult, error) {
 	dr := &results.DocumentResult{}
 	err := base.JsonUnmarshal(r.Body, dr)
@@ -69,22 +94,12 @@ func (r *Response) UnmarshalDocumentResult() (*results.DocumentResult, error) {
 	return dr, nil
 }
 
-func (r *Response) UnmarshalMGetResult() (*results.MGetResult, error) {
-	mgr := &results.MGetResult{}
-	err := base.JsonUnmarshal(r.Body, mgr)
+func (r *Response) UnmarshalSqlSearchResult() (*results.SqlSearchResult, error) {
+	ssr := &results.SqlSearchResult{}
+	err := base.JsonUnmarshal(r.Body, ssr)
 	if err != nil {
 		return nil, err
 	}
 
-	return mgr, nil
-}
-
-func (r *Response) UnmarshalDocumentItem() (*results.DocumentItem, error) {
-	di := &results.DocumentItem{}
-	err := base.JsonUnmarshal(r.Body, di)
-	if err != nil {
-		return nil, err
-	}
-
-	return di, nil
+	return ssr, nil
 }

@@ -3,13 +3,12 @@ package results
 type BulkResult struct {
 	Errors bool `json:"errors"`
 	Items  []map[string]struct {
-		Index   string `json:"_index"`
-		Type    string `json:"_type"`
-		Id      string `json:"_id"`
-		Status  int    `json:"status"`
-		Result  string `json:"result"`
-		Version int    `json:"_version"`
-		Error   struct {
+		DocumentHeader
+
+		Type   string `json:"_type"`
+		Status int    `json:"status"`
+		Result string `json:"result"`
+		Error  struct {
 			Type    string `json:"type"`
 			Reason  string `json:"reason"`
 			CauseBy struct {

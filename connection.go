@@ -4,14 +4,14 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
-	"github.com/grpc-boot/elastic/results"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/grpc-boot/elastic/results"
 
 	"github.com/grpc-boot/base"
 	"github.com/grpc-boot/base/core/zaplogger"
@@ -110,6 +110,10 @@ func (c *Connection) Get(timeout time.Duration, path string, params string) (*Re
 	return c.request(timeout, http.MethodGet, path, params)
 }
 
+func (c *Connection) Delete(timeout time.Duration, path string, params string) (*Response, error) {
+	return c.request(timeout, http.MethodDelete, path, params)
+}
+
 func (c *Connection) IndexCreate(timeout time.Duration, index string, settings *Settings, mappings *Mappings) (ok bool, err error) {
 	var body strings.Builder
 
@@ -135,7 +139,7 @@ func (c *Connection) IndexCreate(timeout time.Duration, index string, settings *
 }
 
 func (c *Connection) IndexDelete(timeout time.Duration, index string) (ok bool, err error) {
-	resp, err := c.request(timeout, http.MethodDelete, "/"+index, "")
+	resp, err := c.Delete(timeout, "/"+index, "")
 
 	if err != nil {
 		return
@@ -170,7 +174,7 @@ func (c *Connection) SetMaxResultWindow(timeout time.Duration, index string, val
 // MappingsAlter
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/indices-put-mapping.html
 func (c *Connection) MappingsAlter(timeout time.Duration, index string, mappings *Mappings) (ok bool, err error) {
-	resp, err := c.request(timeout, http.MethodPut, "/"+index+"/_mapping", base.Bytes2String(mappings.Marshal()))
+	resp, err := c.Put(timeout, "/"+index+"/_mapping", base.Bytes2String(mappings.Marshal()))
 	if err != nil {
 		return
 	}
@@ -205,7 +209,7 @@ func (c *Connection) DocsBulk(timeout time.Duration, items ...BulkDoc) (resp *Re
 
 // DocsInsert
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
-func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.JsonParam) (*results.DocumentResult, error) {
+func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.JsonParam) (*results.IndexResult, error) {
 	var (
 		id, _ = row["_id"].(string)
 		path  strings.Builder
@@ -229,7 +233,7 @@ func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.Js
 	}
 
 	if resp.IsOk() {
-		return resp.UnmarshalDocumentResult()
+		return resp.UnmarshalIndexResult()
 	}
 
 	return nil, resp.Error()
@@ -237,7 +241,7 @@ func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.Js
 
 // DocsUpdate
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html
-func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, doc base.JsonParam) (*results.DocumentResult, error) {
+func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, doc base.JsonParam) (*results.IndexResult, error) {
 	var (
 		docBytes = doc.JsonMarshal()
 		n        = 7 + len(docBytes) + 1
@@ -256,7 +260,7 @@ func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, 
 	}
 
 	if resp.IsOk() {
-		return resp.UnmarshalDocumentResult()
+		return resp.UnmarshalIndexResult()
 	}
 
 	return nil, resp.Error()
@@ -264,7 +268,7 @@ func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, 
 
 // DocsUpdateWithVersion
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
-func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, id string, version int64, fullDoc base.JsonParam) (*results.DocumentResult, error) {
+func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, id string, version int64, fullDoc base.JsonParam) (*results.IndexResult, error) {
 	var (
 		verStr = strconv.FormatInt(version, 10)
 		n      = 1 + len(index) + 6 + len(id) + 9 + len(verStr) + 25
@@ -287,7 +291,7 @@ func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, 
 	}
 
 	if resp.IsOk() {
-		return resp.UnmarshalDocumentResult()
+		return resp.UnmarshalIndexResult()
 	}
 
 	return nil, resp.Error()
@@ -295,14 +299,14 @@ func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, 
 
 // DocsGet
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
-func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*results.DocumentItem, error) {
+func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*results.DocumentResult, error) {
 	resp, err := c.Get(timeout, "/"+index+"/_doc/"+id, "")
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.IsOk() || resp.Status == http.StatusNotFound {
-		return resp.UnmarshalDocumentItem()
+	if resp.IsOk() || resp.Is(http.StatusNotFound) {
+		return resp.UnmarshalDocumentResult()
 	}
 
 	return nil, resp.Error()
@@ -310,7 +314,7 @@ func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*r
 
 // DocsMGet
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-get.html
-func (c *Connection) DocsMGet(timeout time.Duration, index string, idList ...string) (rows *results.MGetResult, err error) {
+func (c *Connection) DocsMGet(timeout time.Duration, index string, idList ...string) (rows *results.DocumentsResult, err error) {
 	param, _ := base.JsonMarshal(map[string]interface{}{
 		"ids": idList,
 	})
@@ -321,7 +325,7 @@ func (c *Connection) DocsMGet(timeout time.Duration, index string, idList ...str
 	}
 
 	if resp.IsOk() {
-		return resp.UnmarshalMGetResult()
+		return resp.UnmarshalDocumentsResult()
 	}
 	return nil, resp.Error()
 }
@@ -343,7 +347,58 @@ func (c *Connection) DocsMSet(timeout time.Duration, index string, rows ...base.
 	return c.DocsBulk(timeout, items...)
 }
 
+// DocsDelete
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-delete.html
+func (c *Connection) DocsDelete(timeout time.Duration, index, id string) (*results.IndexResult, error) {
+	resp, err := c.Delete(timeout, "/"+index+"/_doc/"+id, "")
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() || resp.Is(http.StatusNotFound) {
+		return resp.UnmarshalIndexResult()
+	}
+
+	return nil, resp.Error()
+}
+
+// SqlSearch
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-search-api.html#sql-search-api
+func (c *Connection) SqlSearch(timeout time.Duration, sql string) (*results.SqlSearchResult, error) {
+	var param strings.Builder
+	n := 10 + len(sql) + 2
+	param.Grow(n)
+	param.WriteString(`{"query":"`)
+	param.WriteString(sql)
+	param.WriteString(`"}`)
+
+	resp, err := c.Post(timeout, "/_sql", param.String())
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.IsOk() {
+		return resp.UnmarshalSqlSearchResult()
+	}
+
+	return nil, resp.Error()
+}
+
+// SqlTranslate
+// link: https://www.elastic.co/guide/en/elasticsearch/reference/current/sql-translate-api.html
 func (c *Connection) SqlTranslate(timeout time.Duration, sql string, limit int) (*Response, error) {
-	query := fmt.Sprintf(`{"query": "%s", "fetch_size": %d}`, sql, limit)
-	return c.Post(timeout, "/_sql/translate", query)
+	var (
+		param    strings.Builder
+		limitStr = strconv.Itoa(limit)
+	)
+	n := 10 + len(sql) + 16 + len(limitStr) + 1
+
+	param.Grow(n)
+	param.WriteString(`{"query":"`)
+	param.WriteString(sql)
+	param.WriteString(`", "fetch_size":`)
+	param.WriteString(limitStr)
+	param.WriteByte('}')
+
+	return c.Post(timeout, "/_sql/translate", param.String())
 }

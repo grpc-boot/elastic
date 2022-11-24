@@ -170,6 +170,24 @@ func TestConnection_DocsUpdate(t *testing.T) {
 	t.Logf("info: %+v", getRes)
 }
 
+func TestConnection_DocsDelete(t *testing.T) {
+	res, err := conn.DocsDelete(time.Second*3, `user`, "100")
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("res:%+v", res)
+}
+
+func TestConnection_SqlSearch(t *testing.T) {
+	res, err := conn.SqlSearch(time.Second*3, `SELECT name,content,lastLoginTime,lastLoginIp,status FROM user WHERE tags=1 LIMIT 100`)
+	if err != nil {
+		t.Fatalf("want nil, got err: %s", err)
+	}
+
+	t.Logf("res:%+v", res)
+}
+
 func TestConnection_BulkItems(t *testing.T) {
 	resp, err := conn.DocsBulk(time.Second*10,
 		IndexDoc(`user`, ``, base.JsonParam{
@@ -277,7 +295,7 @@ func TestConnection_MSet(t *testing.T) {
 }
 
 func TestConnection_SqlTranslate(t *testing.T) {
-	resp, err := conn.SqlTranslate(time.Second*3, "SELECT COUNT(id) AS num FROM `user` GROUP BY kind", 10)
+	resp, err := conn.SqlTranslate(time.Second*3, "SELECT status,COUNT(status) FROM user GROUP BY status", 10)
 	if err != nil {
 		t.Fatalf("want nil, got %s", err)
 	}
