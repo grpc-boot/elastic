@@ -2,6 +2,7 @@ package elastic
 
 import (
 	"errors"
+	"github.com/grpc-boot/elastic/results"
 	"net/http"
 	"strconv"
 	"strings"
@@ -38,8 +39,8 @@ func (r *Response) Error() (err error) {
 	return errors.New(errMsg.String())
 }
 
-func (r *Response) UnmarshalBulkResult() (*BulkResult, error) {
-	br := &BulkResult{}
+func (r *Response) UnmarshalBulkResult() (*results.BulkResult, error) {
+	br := &results.BulkResult{}
 	err := base.JsonUnmarshal(r.Body, br)
 	if err != nil {
 		return nil, err
@@ -48,8 +49,8 @@ func (r *Response) UnmarshalBulkResult() (*BulkResult, error) {
 	return br, nil
 }
 
-func (r *Response) UnmarshalSearchResult() (*SearchResult, error) {
-	sr := &SearchResult{}
+func (r *Response) UnmarshalSearchResult() (*results.SearchResult, error) {
+	sr := &results.SearchResult{}
 	err := base.JsonUnmarshal(r.Body, sr)
 	if err != nil {
 		return nil, err
@@ -58,8 +59,8 @@ func (r *Response) UnmarshalSearchResult() (*SearchResult, error) {
 	return sr, nil
 }
 
-func (r *Response) UnmarshalDocumentResult() (*DocumentResult, error) {
-	dr := &DocumentResult{}
+func (r *Response) UnmarshalDocumentResult() (*results.DocumentResult, error) {
+	dr := &results.DocumentResult{}
 	err := base.JsonUnmarshal(r.Body, dr)
 	if err != nil {
 		return nil, err
@@ -68,8 +69,8 @@ func (r *Response) UnmarshalDocumentResult() (*DocumentResult, error) {
 	return dr, nil
 }
 
-func (r *Response) UnmarshalMGetResult() (*MGetResult, error) {
-	mgr := &MGetResult{}
+func (r *Response) UnmarshalMGetResult() (*results.MGetResult, error) {
+	mgr := &results.MGetResult{}
 	err := base.JsonUnmarshal(r.Body, mgr)
 	if err != nil {
 		return nil, err
@@ -78,8 +79,8 @@ func (r *Response) UnmarshalMGetResult() (*MGetResult, error) {
 	return mgr, nil
 }
 
-func (r *Response) UnmarshalDocumentItem() (*DocumentItem, error) {
-	di := &DocumentItem{}
+func (r *Response) UnmarshalDocumentItem() (*results.DocumentItem, error) {
+	di := &results.DocumentItem{}
 	err := base.JsonUnmarshal(r.Body, di)
 	if err != nil {
 		return nil, err

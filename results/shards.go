@@ -1,4 +1,4 @@
-package elastic
+package results
 
 type Shards struct {
 	Total      int64 `json:"total"`

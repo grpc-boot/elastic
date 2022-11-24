@@ -1,4 +1,4 @@
-package elastic
+package results
 
 import "github.com/grpc-boot/base"
 

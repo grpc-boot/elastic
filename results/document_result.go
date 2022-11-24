@@ -1,4 +1,4 @@
-package elastic
+package results
 
 type DocumentResult struct {
 	DocumentHeader

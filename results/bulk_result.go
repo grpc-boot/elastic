@@ -1,4 +1,4 @@
-package elastic
+package results
 
 type BulkResult struct {
 	Errors bool `json:"errors"`

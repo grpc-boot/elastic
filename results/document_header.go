@@ -1,4 +1,4 @@
-package elastic
+package results
 
 type DocumentHeader struct {
 	Index       string `json:"_index"`

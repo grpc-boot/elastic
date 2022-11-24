@@ -1,6 +1,7 @@
 package elastic
 
 import (
+	"github.com/grpc-boot/elastic/results"
 	"strconv"
 	"strings"
 	"time"
@@ -120,7 +121,7 @@ func (q *Query) Build() string {
 	return buf.String()
 }
 
-func (q *Query) Search(timeout time.Duration, conn *Connection) (result *SearchResult, err error) {
+func (q *Query) Search(timeout time.Duration, conn *Connection) (result *results.SearchResult, err error) {
 	param := q.Build()
 	resp, err := conn.Get(timeout, "/"+q.index+"/_search", param)
 	if err != nil {
@@ -134,7 +135,7 @@ func (q *Query) Search(timeout time.Duration, conn *Connection) (result *SearchR
 	return nil, resp.Error()
 }
 
-func (q *Query) SearchRows(timeout time.Duration, conn *Connection) (result *RowsResult, err error) {
+func (q *Query) SearchRows(timeout time.Duration, conn *Connection) (result *results.RowsResult, err error) {
 	rs, err := q.Search(timeout, conn)
 	if err != nil {
 		return nil, err

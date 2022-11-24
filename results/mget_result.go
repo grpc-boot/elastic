@@ -1,6 +1,8 @@
-package elastic
+package results
 
-import "github.com/grpc-boot/base"
+import (
+	"github.com/grpc-boot/base"
+)
 
 type MGetResult struct {
 	Docs []DocumentItem `json:"docs"`

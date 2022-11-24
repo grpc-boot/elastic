@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/grpc-boot/elastic/results"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -204,7 +205,7 @@ func (c *Connection) DocsBulk(timeout time.Duration, items ...BulkDoc) (resp *Re
 
 // DocsInsert
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
-func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.JsonParam) (*DocumentResult, error) {
+func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.JsonParam) (*results.DocumentResult, error) {
 	var (
 		id, _ = row["_id"].(string)
 		path  strings.Builder
@@ -236,7 +237,7 @@ func (c *Connection) DocsInsert(timeout time.Duration, index string, row base.Js
 
 // DocsUpdate
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-update.html
-func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, doc base.JsonParam) (*DocumentResult, error) {
+func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, doc base.JsonParam) (*results.DocumentResult, error) {
 	var (
 		docBytes = doc.JsonMarshal()
 		n        = 7 + len(docBytes) + 1
@@ -263,7 +264,7 @@ func (c *Connection) DocsUpdate(timeout time.Duration, index string, id string, 
 
 // DocsUpdateWithVersion
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-index_.html
-func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, id string, version int64, fullDoc base.JsonParam) (*DocumentResult, error) {
+func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, id string, version int64, fullDoc base.JsonParam) (*results.DocumentResult, error) {
 	var (
 		verStr = strconv.FormatInt(version, 10)
 		n      = 1 + len(index) + 6 + len(id) + 9 + len(verStr) + 25
@@ -294,7 +295,7 @@ func (c *Connection) DocsUpdateWithVersion(timeout time.Duration, index string, 
 
 // DocsGet
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-get.html
-func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*DocumentItem, error) {
+func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*results.DocumentItem, error) {
 	resp, err := c.Get(timeout, "/"+index+"/_doc/"+id, "")
 	if err != nil {
 		return nil, err
@@ -309,7 +310,7 @@ func (c *Connection) DocsGet(timeout time.Duration, index string, id string) (*D
 
 // DocsMGet
 // link: https://www.elastic.co/guide/en/elasticsearch/reference/current/docs-multi-get.html
-func (c *Connection) DocsMGet(timeout time.Duration, index string, idList ...string) (rows *MGetResult, err error) {
+func (c *Connection) DocsMGet(timeout time.Duration, index string, idList ...string) (rows *results.MGetResult, err error) {
 	param, _ := base.JsonMarshal(map[string]interface{}{
 		"ids": idList,
 	})
