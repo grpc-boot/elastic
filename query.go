@@ -1,10 +1,11 @@
 package elastic
 
 import (
-	"github.com/grpc-boot/elastic/results"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/grpc-boot/elastic/results"
 
 	"github.com/grpc-boot/base"
 )
